@@ -1,0 +1,214 @@
+{% extends "base.html" %}
+{% block title %}New Ticket — SupportDesk CRM{% endblock %}
+{% block description %}Submit a new customer support ticket.{% endblock %}
+
+{% block content %}
+<!-- ── HEADER ──────────────────────────────────────────────────────────── -->
+<div class="mb-8 flex items-center gap-4">
+  <a href="/" id="back-to-list"
+     class="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-700 bg-slate-800 text-slate-400
+            transition-all hover:border-slate-600 hover:text-white active:scale-95">
+    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+    </svg>
+  </a>
+  <div>
+    <h1 class="text-2xl font-bold text-white">New Support Ticket</h1>
+    <p class="mt-0.5 text-sm text-slate-400">Fill in the details below to open a ticket.</p>
+  </div>
+</div>
+
+<!-- ── FORM CARD ───────────────────────────────────────────────────────── -->
+<div class="mx-auto max-w-2xl">
+  <div class="animate-slide-up rounded-2xl border border-slate-800 bg-slate-900/70 p-8 shadow-2xl">
+
+    <form id="create-form" novalidate>
+
+      <!-- Customer Name -->
+      <div class="mb-6">
+        <label for="customer_name" class="mb-2 block text-sm font-semibold text-slate-200">
+          Customer Name <span class="text-red-400">*</span>
+        </label>
+        <input id="customer_name" name="customer_name" type="text"
+               placeholder="e.g. Alice Smith" required autocomplete="name"
+               class="form-input w-full rounded-xl border border-slate-700 bg-slate-800/70 px-4 py-3 text-sm text-slate-100
+                      placeholder-slate-500 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30" />
+        <p class="field-error mt-1.5 hidden text-xs text-red-400"></p>
+      </div>
+
+      <!-- Customer Email -->
+      <div class="mb-6">
+        <label for="customer_email" class="mb-2 block text-sm font-semibold text-slate-200">
+          Customer Email <span class="text-red-400">*</span>
+        </label>
+        <input id="customer_email" name="customer_email" type="email"
+               placeholder="e.g. alice@example.com" required autocomplete="email"
+               class="form-input w-full rounded-xl border border-slate-700 bg-slate-800/70 px-4 py-3 text-sm text-slate-100
+                      placeholder-slate-500 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30" />
+        <p class="field-error mt-1.5 hidden text-xs text-red-400"></p>
+      </div>
+
+      <!-- Subject -->
+      <div class="mb-6">
+        <label for="subject" class="mb-2 block text-sm font-semibold text-slate-200">
+          Issue Subject <span class="text-red-400">*</span>
+        </label>
+        <input id="subject" name="subject" type="text"
+               placeholder="e.g. Cannot log in to my account" required
+               class="form-input w-full rounded-xl border border-slate-700 bg-slate-800/70 px-4 py-3 text-sm text-slate-100
+                      placeholder-slate-500 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30" />
+        <p class="field-error mt-1.5 hidden text-xs text-red-400"></p>
+      </div>
+
+      <!-- Description -->
+      <div class="mb-8">
+        <label for="description" class="mb-2 block text-sm font-semibold text-slate-200">
+          Description <span class="text-red-400">*</span>
+        </label>
+        <textarea id="description" name="description" rows="5"
+                  placeholder="Describe the issue in detail — steps to reproduce, error messages, expected vs actual behaviour…"
+                  required
+                  class="form-input w-full resize-none rounded-xl border border-slate-700 bg-slate-800/70 px-4 py-3 text-sm text-slate-100
+                         placeholder-slate-500 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30"></textarea>
+        <p class="field-error mt-1.5 hidden text-xs text-red-400"></p>
+      </div>
+
+      <!-- Error banner -->
+      <div id="form-error" class="mb-6 hidden rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300"></div>
+
+      <!-- Actions -->
+      <div class="flex flex-col gap-3 sm:flex-row-reverse">
+        <button id="submit-btn" type="submit"
+                class="flex flex-1 items-center justify-center gap-2 rounded-xl bg-brand-600 px-6 py-3 text-sm font-semibold
+                       text-white shadow-lg shadow-brand-500/25 transition-all hover:bg-brand-500 hover:shadow-brand-500/40
+                       active:scale-[.98] disabled:cursor-not-allowed disabled:opacity-50">
+          <svg id="submit-icon" class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M12 4v16m8-8H4"/>
+          </svg>
+          <span id="submit-label">Create Ticket</span>
+        </button>
+
+        <a href="/" id="cancel-btn"
+           class="flex flex-1 items-center justify-center rounded-xl border border-slate-700 bg-slate-800 px-6 py-3
+                  text-sm font-semibold text-slate-300 transition-all hover:border-slate-600 hover:text-white active:scale-[.98]">
+          Cancel
+        </a>
+      </div>
+
+    </form>
+  </div>
+
+  <!-- Tip -->
+  <p class="mt-4 text-center text-xs text-slate-600">
+    All fields are required. A unique ticket ID will be generated automatically.
+  </p>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const form    = document.getElementById('create-form');
+  const submitBtn   = document.getElementById('submit-btn');
+  const submitLabel = document.getElementById('submit-label');
+  const submitIcon  = document.getElementById('submit-icon');
+  const formError   = document.getElementById('form-error');
+
+  // ── Inline field validation ────────────────────────────────────────────
+  function validateField(input) {
+    const wrapper = input.closest('div');
+    const errEl   = wrapper.querySelector('.field-error');
+    let msg = '';
+
+    if (!input.value.trim()) {
+      msg = 'This field is required.';
+    } else if (input.type === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.value.trim())) {
+      msg = 'Please enter a valid email address.';
+    }
+
+    if (msg) {
+      input.classList.add('border-red-500', 'ring-1', 'ring-red-500/30');
+      input.classList.remove('border-slate-700');
+      errEl.textContent = msg;
+      errEl.classList.remove('hidden');
+      return false;
+    } else {
+      input.classList.remove('border-red-500', 'ring-1', 'ring-red-500/30');
+      input.classList.add('border-slate-700');
+      errEl.classList.add('hidden');
+      return true;
+    }
+  }
+
+  // Validate on blur
+  document.querySelectorAll('.form-input').forEach(inp => {
+    inp.addEventListener('blur', () => validateField(inp));
+    inp.addEventListener('input', () => {
+      if (inp.classList.contains('border-red-500')) validateField(inp);
+    });
+  });
+
+  // ── Spinner helper ─────────────────────────────────────────────────────
+  function setLoading(loading) {
+    submitBtn.disabled = loading;
+    if (loading) {
+      submitIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>`;
+      submitLabel.textContent = 'Creating…';
+      submitIcon.classList.add('animate-spin');
+    } else {
+      submitIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>`;
+      submitLabel.textContent = 'Create Ticket';
+      submitIcon.classList.remove('animate-spin');
+    }
+  }
+
+  // ── Form submit ────────────────────────────────────────────────────────
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    formError.classList.add('hidden');
+
+    // Validate all fields
+    const inputs = form.querySelectorAll('.form-input');
+    let valid = true;
+    inputs.forEach(inp => { if (!validateField(inp)) valid = false; });
+    if (!valid) return;
+
+    setLoading(true);
+
+    const payload = {
+      customer_name:  document.getElementById('customer_name').value.trim(),
+      customer_email: document.getElementById('customer_email').value.trim(),
+      subject:        document.getElementById('subject').value.trim(),
+      description:    document.getElementById('description').value.trim(),
+    };
+
+    try {
+      const res  = await fetch('/api/tickets/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        const msg = data.detail?.[0]?.msg || data.detail || 'Something went wrong.';
+        formError.textContent = msg;
+        formError.classList.remove('hidden');
+        setLoading(false);
+        return;
+      }
+
+      // Success — redirect to the ticket detail page
+      toast(`Ticket ${data.ticket_id} created successfully!`, 'success');
+      setTimeout(() => { window.location.href = `/tickets/${data.ticket_id}`; }, 800);
+
+    } catch (err) {
+      formError.textContent = 'Network error — could not reach the server.';
+      formError.classList.remove('hidden');
+      setLoading(false);
+    }
+  });
+</script>
+{% endblock %}

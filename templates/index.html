@@ -1,0 +1,219 @@
+{% extends "base.html" %}
+{% block title %}All Tickets — SupportDesk CRM{% endblock %}
+
+{% block content %}
+<!-- ── PAGE HEADER ──────────────────────────────────────────────────────── -->
+<div class="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+  <div>
+    <h1 class="text-2xl font-bold text-white">Support Tickets</h1>
+    <p class="mt-1 text-sm text-slate-400">Track and manage all customer issues in one place.</p>
+  </div>
+  <a href="/tickets/new" id="hero-new-ticket"
+     class="inline-flex items-center gap-2 self-start rounded-xl bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-500/25 transition-all hover:bg-brand-500 hover:shadow-brand-500/40 active:scale-95 sm:self-auto">
+    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+    </svg>
+    New Ticket
+  </a>
+</div>
+
+<!-- ── STATS CARDS ──────────────────────────────────────────────────────── -->
+<div id="stats-row" class="mb-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
+  <!-- filled by JS -->
+  <div class="animate-pulse rounded-2xl bg-slate-800/60 h-20"></div>
+  <div class="animate-pulse rounded-2xl bg-slate-800/60 h-20"></div>
+  <div class="animate-pulse rounded-2xl bg-slate-800/60 h-20"></div>
+  <div class="animate-pulse rounded-2xl bg-slate-800/60 h-20"></div>
+</div>
+
+<!-- ── CONTROLS ─────────────────────────────────────────────────────────── -->
+<div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+
+  <!-- Search -->
+  <div class="relative flex-1">
+    <svg class="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500"
+         fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z"/>
+    </svg>
+    <input id="search-input" type="text" placeholder="Search by name, email, ID, subject…"
+           class="w-full rounded-xl border border-slate-700 bg-slate-800/70 pl-10 pr-4 py-2.5 text-sm text-slate-100
+                  placeholder-slate-500 outline-none ring-0 transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30" />
+  </div>
+
+  <!-- Status filter tabs -->
+  <div id="filter-tabs" class="flex gap-1 rounded-xl border border-slate-700 bg-slate-800/70 p-1">
+    <button data-status="" id="filter-all"
+            class="filter-btn active-filter rounded-lg px-3 py-1.5 text-xs font-semibold transition-all">All</button>
+    <button data-status="Open" id="filter-open"
+            class="filter-btn rounded-lg px-3 py-1.5 text-xs font-semibold transition-all text-slate-400 hover:text-white">Open</button>
+    <button data-status="In Progress" id="filter-inprogress"
+            class="filter-btn rounded-lg px-3 py-1.5 text-xs font-semibold transition-all text-slate-400 hover:text-white">In Progress</button>
+    <button data-status="Closed" id="filter-closed"
+            class="filter-btn rounded-lg px-3 py-1.5 text-xs font-semibold transition-all text-slate-400 hover:text-white">Closed</button>
+  </div>
+
+</div>
+
+<!-- ── TICKET TABLE ──────────────────────────────────────────────────────── -->
+<div class="overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/60 shadow-xl">
+  <!-- Table header -->
+  <div class="hidden grid-cols-[140px_1fr_1fr_120px_130px] gap-4 border-b border-slate-800 bg-slate-800/40 px-6 py-3 text-xs font-semibold uppercase tracking-wider text-slate-500 sm:grid">
+    <span>Ticket ID</span>
+    <span>Customer</span>
+    <span>Subject</span>
+    <span>Status</span>
+    <span>Created</span>
+  </div>
+
+  <!-- Rows injected by JS -->
+  <div id="ticket-list" class="divide-y divide-slate-800/60">
+    <!-- skeleton -->
+    <div class="animate-pulse px-6 py-4"><div class="h-4 w-3/4 rounded bg-slate-800"></div></div>
+    <div class="animate-pulse px-6 py-4"><div class="h-4 w-2/3 rounded bg-slate-800"></div></div>
+    <div class="animate-pulse px-6 py-4"><div class="h-4 w-3/4 rounded bg-slate-800"></div></div>
+  </div>
+</div>
+
+<!-- Result count -->
+<p id="result-count" class="mt-4 text-right text-xs text-slate-600"></p>
+
+{% endblock %}
+
+{% block scripts %}
+<style>
+  .active-filter { background: #4f46e5; color: #fff; }
+</style>
+<script>
+  let allTickets = [];
+  let currentStatus = '';
+  let searchTimer;
+
+  // ── Fetch & render tickets ─────────────────────────────────────────────
+  async function loadTickets() {
+    try {
+      const res = await fetch('/api/tickets/');
+      allTickets = await res.json();
+      renderStats(allTickets);
+      renderTable(allTickets);
+    } catch (e) {
+      document.getElementById('ticket-list').innerHTML =
+        `<div class="px-6 py-12 text-center text-slate-500">Failed to load tickets. Is the server running?</div>`;
+    }
+  }
+
+  // ── Stats cards ────────────────────────────────────────────────────────
+  function renderStats(tickets) {
+    const total      = tickets.length;
+    const open       = tickets.filter(t => t.status === 'Open').length;
+    const inProgress = tickets.filter(t => t.status === 'In Progress').length;
+    const closed     = tickets.filter(t => t.status === 'Closed').length;
+
+    const cards = [
+      { label:'Total',       value: total,      icon:'🎫', color:'text-slate-200',  ring:'ring-slate-700'   },
+      { label:'Open',        value: open,        icon:'🔵', color:'text-blue-300',   ring:'ring-blue-400/30' },
+      { label:'In Progress', value: inProgress,  icon:'🟡', color:'text-amber-300',  ring:'ring-amber-400/30'},
+      { label:'Closed',      value: closed,      icon:'🟢', color:'text-emerald-300',ring:'ring-emerald-400/30'},
+    ];
+
+    document.getElementById('stats-row').innerHTML = cards.map(c => `
+      <div class="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 ring-1 ${c.ring} transition-transform hover:-translate-y-0.5">
+        <div class="flex items-center justify-between">
+          <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">${c.label}</p>
+          <span class="text-lg">${c.icon}</span>
+        </div>
+        <p class="mt-2 text-3xl font-bold ${c.color}">${c.value}</p>
+      </div>
+    `).join('');
+  }
+
+  // ── Ticket rows ────────────────────────────────────────────────────────
+  function renderTable(tickets) {
+    const el = document.getElementById('ticket-list');
+    if (tickets.length === 0) {
+      el.innerHTML = `
+        <div class="flex flex-col items-center gap-4 px-6 py-16 text-center">
+          <div class="flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-800 text-3xl">📭</div>
+          <div>
+            <p class="font-semibold text-slate-300">No tickets found</p>
+            <p class="mt-1 text-sm text-slate-500">Try a different search or filter, or <a href="/tickets/new" class="text-brand-400 hover:underline">create a new ticket</a>.</p>
+          </div>
+        </div>`;
+      document.getElementById('result-count').textContent = '';
+      return;
+    }
+
+    el.innerHTML = tickets.map(t => `
+      <a href="/tickets/${t.ticket_id}" id="row-${t.ticket_id}"
+         class="group grid grid-cols-1 gap-2 px-6 py-4 transition-colors hover:bg-slate-800/50
+                sm:grid-cols-[140px_1fr_1fr_120px_130px] sm:items-center sm:gap-4">
+
+        <span class="font-mono text-sm font-semibold text-brand-400">${t.ticket_id}</span>
+
+        <div class="sm:truncate">
+          <p class="text-sm font-medium text-slate-200 group-hover:text-white sm:truncate">${esc(t.customer_name)}</p>
+          <p class="text-xs text-slate-500 sm:truncate">${esc(t.customer_email)}</p>
+        </div>
+
+        <p class="text-sm text-slate-300 sm:truncate">${esc(t.subject)}</p>
+
+        <div>${statusBadge(t.status)}</div>
+
+        <p class="text-xs text-slate-500">${fmtDate(t.created_at)}</p>
+      </a>
+    `).join('');
+
+    document.getElementById('result-count').textContent =
+      `Showing ${tickets.length} ticket${tickets.length !== 1 ? 's' : ''}`;
+  }
+
+  // ── HTML escape ────────────────────────────────────────────────────────
+  function esc(s) {
+    return String(s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // ── Filter + search ────────────────────────────────────────────────────
+  function applyFilters() {
+    const q = document.getElementById('search-input').value.trim().toLowerCase();
+    let filtered = allTickets;
+
+    if (currentStatus) {
+      filtered = filtered.filter(t => t.status === currentStatus);
+    }
+    if (q) {
+      filtered = filtered.filter(t =>
+        t.ticket_id.toLowerCase().includes(q)      ||
+        t.customer_name.toLowerCase().includes(q)  ||
+        t.customer_email.toLowerCase().includes(q) ||
+        t.subject.toLowerCase().includes(q)
+      );
+    }
+    renderTable(filtered);
+  }
+
+  // ── Event: search ──────────────────────────────────────────────────────
+  document.getElementById('search-input').addEventListener('input', () => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(applyFilters, 220);
+  });
+
+  // ── Event: filter tabs ─────────────────────────────────────────────────
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.filter-btn').forEach(b => {
+        b.classList.remove('active-filter');
+        b.classList.add('text-slate-400');
+      });
+      btn.classList.add('active-filter');
+      btn.classList.remove('text-slate-400');
+      currentStatus = btn.dataset.status;
+      applyFilters();
+    });
+  });
+
+  // ── Boot ───────────────────────────────────────────────────────────────
+  loadTickets();
+</script>
+{% endblock %}
