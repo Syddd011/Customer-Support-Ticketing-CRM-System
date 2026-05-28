@@ -1,7 +1,4 @@
-"""
-main.py
-FastAPI entry point for the Customer Support Ticketing CRM.
-"""
+# main.py - FastAPI app setup and page routes
 
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
@@ -14,21 +11,17 @@ from database import init_db
 from routers import tickets as tickets_router
 
 
-# ---------------------------------------------------------------------------
-# Lifespan: runs once on startup and once on shutdown
-# ---------------------------------------------------------------------------
+# lifespan runs on startup and shutdown
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print("[main] Starting CRM server ...")
+    print("Server starting...")
     init_db()
-    print("[main] Database ready.")
+    print("Database ready.")
     yield
-    print("[main] Shutting down CRM server.")
+    print("Server shutting down.")
 
 
-# ---------------------------------------------------------------------------
-# App factory
-# ---------------------------------------------------------------------------
+# app setup
 app = FastAPI(
     title="Customer Support Ticketing CRM",
     description="A simple, full-stack support ticket management system.",
@@ -48,39 +41,33 @@ app.add_middleware(
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
-# ---------------------------------------------------------------------------
-# Routers (API)
-# ---------------------------------------------------------------------------
+# API routes
 app.include_router(tickets_router.router)
 
 
-# ---------------------------------------------------------------------------
-# HTML Page Routes
-# ---------------------------------------------------------------------------
+# HTML routes
 
 @app.get("/", response_class=HTMLResponse, include_in_schema=False)
 async def home(request: Request):
-    """Home page — ticket list with search and filter."""
+    """Show the ticket list page."""
     return templates.TemplateResponse(request, "index.html")
 
 
 @app.get("/tickets/new", response_class=HTMLResponse, include_in_schema=False)
 async def new_ticket_page(request: Request):
-    """New ticket creation form page."""
+    """Show the create ticket form."""
     return templates.TemplateResponse(request, "create.html")
 
 
 @app.get("/tickets/{ticket_id}", response_class=HTMLResponse, include_in_schema=False)
 async def ticket_detail_page(request: Request, ticket_id: str):
-    """Ticket detail page — view, update status, add notes."""
+    """Show the detail page for a single ticket."""
     return templates.TemplateResponse(
         request, "ticket_detail.html", {"ticket_id": ticket_id}
     )
 
 
-# ---------------------------------------------------------------------------
-# Health check (JSON)
-# ---------------------------------------------------------------------------
+# health check
 @app.get("/health", tags=["Health"])
 async def health():
     return {"status": "CRM is running"}

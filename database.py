@@ -1,40 +1,27 @@
-"""
-database.py
-SQLite database setup for the Customer Support Ticketing CRM.
-Connects to SQLite, creates the tickets and notes tables,
-and auto-generates ticket IDs in the format TKT-001.
-"""
+# database.py - sets up SQLite and creates the tables
 
 import sqlite3
 import os
 from datetime import datetime
 
-# Path to the SQLite database file
-DB_PATH = os.path.join(os.path.dirname(__file__), "crm.db")
+db_file = os.path.join(os.path.dirname(__file__), "crm.db")
 
 
 def get_connection() -> sqlite3.Connection:
-    """
-    Returns a new SQLite connection with row_factory set so that
-    rows are returned as dict-like objects (sqlite3.Row).
-    """
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row          # access columns by name
-    conn.execute("PRAGMA foreign_keys = ON")  # enforce FK constraints
+    """Return a SQLite connection with row_factory enabled."""
+    # using row_factory so I don't have to use row[0], row[1]
+    conn = sqlite3.connect(db_file)
+    conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA foreign_keys = ON")
     return conn
 
 
 def init_db() -> None:
-    """
-    Creates the database tables if they don't already exist.
-    Safe to call multiple times (idempotent).
-    """
+    """Create tables if they don't exist yet."""
     with get_connection() as conn:
         cursor = conn.cursor()
 
-        # ------------------------------------------------------------------
-        # TICKETS table
-        # ------------------------------------------------------------------
+        # tickets table
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS tickets (
                 id              INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -50,9 +37,7 @@ def init_db() -> None:
             )
         """)
 
-        # ------------------------------------------------------------------
-        # NOTES table
-        # ------------------------------------------------------------------
+        # notes are optional but helpful for tracking ticket progress
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS notes (
                 id          INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -64,15 +49,11 @@ def init_db() -> None:
         """)
 
         conn.commit()
-    print(f"[database] Tables initialised. DB: {DB_PATH}")
+    print(f"Tables ready. DB: {db_file}")
 
 
 def generate_ticket_id() -> str:
-    """
-    Generates the next sequential ticket ID in the format TKT-NNN.
-    Reads the current maximum ID from the database and increments it.
-    Returns 'TKT-001' when the table is empty.
-    """
+    """Generate the next ticket ID like TKT-001, TKT-002, etc."""
     with get_connection() as conn:
         cursor = conn.cursor()
         cursor.execute("SELECT ticket_id FROM tickets ORDER BY id DESC LIMIT 1")
@@ -81,15 +62,13 @@ def generate_ticket_id() -> str:
     if row is None:
         return "TKT-001"
 
-    # Extract the numeric part and increment
+    # padded to 3 digits so sorting works correctly
     last_number = int(row["ticket_id"].split("-")[1])
     return f"TKT-{last_number + 1:03d}"
 
 
-# ---------------------------------------------------------------------------
-# Run table creation automatically when the module/script is executed directly
-# ---------------------------------------------------------------------------
+# run directly to initialise the database
 if __name__ == "__main__":
-    print("[database] Initialising database …")
+    print("Setting up database...")
     init_db()
-    print("[database] Done.")
+    print("Done.")
