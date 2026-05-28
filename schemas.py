@@ -61,11 +61,12 @@ class NoteOut(BaseModel):
 
 
 class TicketSummary(BaseModel):
-    """Used in the list endpoint — no description or notes to keep it lean."""
+    """Used in the list endpoint."""
     ticket_id: str
     customer_name: str
     customer_email: str
     subject: str
+    description: str
     status: str
     created_at: str
 
